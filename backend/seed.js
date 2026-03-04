@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
+const dotenv = require('dotenv');
 const Admin = require('./models/Admin');
 const Proctor = require('./models/Proctor');
 
-const MONGO_URI = 'mongodb://127.0.0.1:27017/internship_portal';
+dotenv.config();
+
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/internship_portal';
 
 mongoose.connect(MONGO_URI)
     .then(async () => {

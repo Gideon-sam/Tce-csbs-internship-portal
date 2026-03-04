@@ -16,6 +16,37 @@ exports.submitInternship = async (req, res) => {
             return res.status(400).json({ message: 'Certificate file is required' });
         }
 
+        // Find student to get department
+        const student = await Student.findById(req.user.id);
+
+        // Check if student already has internships with assigned proctor
+        const existingInternship = await Internship.findOne({
+            studentId: req.user.id,
+            proctorId: { $exists: true, $ne: null }
+        });
+
+        let assignedProctor;
+
+        if (existingInternship && existingInternship.proctorId) {
+            // Use the same proctor as previous internships
+            assignedProctor = existingInternship.proctorId;
+            console.log('Using existing proctor for student:', student.name);
+        } else {
+            // Find a proctor in the same department for first-time submission
+            const proctor = await Proctor.findOne({ department: student.department });
+            if (proctor) {
+                assignedProctor = proctor._id;
+                // Add to proctor's assigned students if not already there
+                if (!proctor.assignedStudents.includes(student._id)) {
+                    proctor.assignedStudents.push(student._id);
+                    await proctor.save();
+                }
+                console.log('Assigned new proctor for student:', student.name);
+            } else {
+                console.warn(`No proctor found for department: ${student.department}`);
+            }
+        }
+
         const internship = await Internship.create({
             studentId: req.user.id,
             companyName,
@@ -26,25 +57,9 @@ exports.submitInternship = async (req, res) => {
             certificateFilePath,
             pptFilePath,
             reportFilePath,
-            photoFilePath
+            photoFilePath,
+            proctorId: assignedProctor
         });
-
-        // Find student to get department and assign proctor
-        const student = await Student.findById(req.user.id);
-        // Find a proctor in the same department
-        const proctor = await Proctor.findOne({ department: student.department });
-
-        if (proctor) {
-            internship.proctorId = proctor._id;
-            await internship.save();
-            // Add to proctor's assigned students if not already there
-            if (!proctor.assignedStudents.includes(student._id)) {
-                proctor.assignedStudents.push(student._id);
-                await proctor.save();
-            }
-        } else {
-            console.warn(`No proctor found for department: ${student.department}`);
-        }
 
         // Send Email Notification to Student
         console.log('Sending submission confirmation email to:', student.email);
@@ -56,6 +71,7 @@ exports.submitInternship = async (req, res) => {
 
         res.status(201).json({ message: 'Internship submitted successfully', internship });
     } catch (error) {
+        console.error('Internship submission error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -70,11 +86,68 @@ exports.getMyInternships = async (req, res) => {
     }
 };
 
-// Get Proctor Assigned Internships
+// Get Proctor Assigned Internships with Student History (Grouped by Student)
 exports.getAssignedInternships = async (req, res) => {
     try {
-        const internships = await Internship.find({ proctorId: req.user.id }).populate('studentId', 'name registerNo year');
-        res.json(internships);
+        const internships = await Internship.find({ proctorId: req.user.id })
+            .populate('studentId', 'name registerNo year credits department')
+            .sort({ createdAt: -1 });
+
+        // Group internships by student
+        const studentMap = new Map();
+
+        for (const internship of internships) {
+            if (!internship.studentId) continue;
+
+            const studentId = internship.studentId._id.toString();
+
+            if (!studentMap.has(studentId)) {
+                // Get all internships for this student
+                const studentHistory = await Internship.find({
+                    studentId: internship.studentId._id
+                }).sort({ createdAt: -1 });
+
+                // Find the latest submission (most recent)
+                const latestSubmission = studentHistory[0];
+
+                studentMap.set(studentId, {
+                    _id: latestSubmission._id,
+                    studentId: internship.studentId,
+                    companyName: latestSubmission.companyName,
+                    description: latestSubmission.description,
+                    mode: latestSubmission.mode,
+                    status: latestSubmission.status,
+                    durationFrom: latestSubmission.durationFrom,
+                    durationTo: latestSubmission.durationTo,
+                    certificateFilePath: latestSubmission.certificateFilePath,
+                    pptFilePath: latestSubmission.pptFilePath,
+                    reportFilePath: latestSubmission.reportFilePath,
+                    photoFilePath: latestSubmission.photoFilePath,
+                    createdAt: latestSubmission.createdAt,
+                    rejectionReason: latestSubmission.rejectionReason,
+                    studentHistory: studentHistory.map(hist => ({
+                        _id: hist._id,
+                        companyName: hist.companyName,
+                        description: hist.description,
+                        mode: hist.mode,
+                        status: hist.status,
+                        durationFrom: hist.durationFrom,
+                        durationTo: hist.durationTo,
+                        certificateFilePath: hist.certificateFilePath,
+                        pptFilePath: hist.pptFilePath,
+                        reportFilePath: hist.reportFilePath,
+                        photoFilePath: hist.photoFilePath,
+                        createdAt: hist.createdAt,
+                        rejectionReason: hist.rejectionReason
+                    }))
+                });
+            }
+        }
+
+        // Convert map to array
+        const groupedInternships = Array.from(studentMap.values());
+
+        res.json(groupedInternships);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

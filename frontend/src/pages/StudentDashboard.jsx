@@ -165,12 +165,12 @@ const StudentDashboard = () => {
             {/* Success/Error Messages */}
             {success && (
                 <div style={{ background: '#d4edda', color: '#155724', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #c3e6cb' }}>
-                    ✅ {success}
+                    {success}
                 </div>
             )}
             {error && (
                 <div style={{ background: '#f8d7da', color: '#721c24', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #f5c6cb' }}>
-                    ❌ {error}
+                    {error}
                 </div>
             )}
 
@@ -192,7 +192,7 @@ const StudentDashboard = () => {
                         gap: '8px'
                     }}
                 >
-                    {showForm ? '✖ Cancel' : '➕ Submit Internship Details'}
+                    {showForm ? '✖ Cancel' : 'Submit Internship Details'}
                 </button>
             </div>
 
@@ -219,8 +219,8 @@ const StudentDashboard = () => {
                                 <div className="form-group">
                                     <label>Mode *</label>
                                     <select name="mode" value={formData.mode} onChange={handleChange}>
-                                        <option value="Online">🌐 Online</option>
-                                        <option value="Offline">🏢 Offline</option>
+                                        <option value="Online"> Online</option>
+                                        <option value="Offline"> Offline</option>
                                     </select>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -257,7 +257,7 @@ const StudentDashboard = () => {
                                     width: '100%',
                                     marginTop: '20px'
                                 }}>
-                                    {submitting ? '⏳ Submitting...' : 'Submit Internship'}
+                                    {submitting ? ' Submitting...' : 'Submit Internship'}
                                 </button>
                             </form>
                         </div>
@@ -269,7 +269,7 @@ const StudentDashboard = () => {
             <div className="submissions-list">
                 {internships.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px', background: '#f5f5f5', borderRadius: '8px', color: '#666' }}>
-                        <p style={{ fontSize: '2rem', margin: 0 }}>📭</p>
+                        <p style={{ fontSize: '2rem', margin: 0 }}></p>
                         <p>No internships submitted yet.</p>
                     </div>
                 ) : (
@@ -308,7 +308,7 @@ const StudentDashboard = () => {
                                         color: intern.status === 'Approved' ? '#2e7d32' : intern.status === 'Rejected' ? '#c62828' : '#ef6c00',
                                         border: `1px solid ${intern.status === 'Approved' ? '#a5d6a7' : intern.status === 'Rejected' ? '#ef9a9a' : '#ffe0b2'}`
                                     }}>
-                                        {intern.status === 'Pending' ? '⏳ Pending Approval' : intern.status === 'Approved' ? '✅ Approved' : '❌ Rejected'}
+                                        {intern.status === 'Pending' ? ' Pending Approval' : intern.status === 'Approved' ? ' Approved' : 'Rejected'}
                                     </span>
                                 </div>
                             </div>
